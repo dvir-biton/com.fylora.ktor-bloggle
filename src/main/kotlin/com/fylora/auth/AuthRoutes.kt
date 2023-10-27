@@ -21,7 +21,7 @@ fun Route.signUp(
     hashingService: HashingService,
     userDataSource: UserDataSource
 ) {
-    post("signup") {
+    post("/signup") {
         val request = call.receiveNullable<AuthRequest>() ?: kotlin.run {
             call.respond(HttpStatusCode.BadRequest)
             return@post
@@ -73,7 +73,7 @@ fun Route.signIn(
     tokenService: TokenService,
     tokenConfig: TokenConfig
 ) {
-    post("signin") {
+    post("/signin") {
         val request = call.receiveNullable<AuthRequest>() ?: kotlin.run {
             call.respond(HttpStatusCode.BadRequest)
             return@post

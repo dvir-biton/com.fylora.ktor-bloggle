@@ -9,6 +9,7 @@ import com.fylora.auth.security.token.TokenService
 import com.fylora.auth.signIn
 import com.fylora.auth.signUp
 import com.fylora.session.session
+import com.fylora.session.test
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -28,5 +29,7 @@ fun Application.configureRouting(
         authenticate()
         getUserInfo()
         session()
+
+        test()
     }
 }

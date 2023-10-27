@@ -1,6 +1,7 @@
 package com.fylora.session
 
 import com.fylora.auth.data.user.User
+import com.fylora.logging.Logging
 import com.fylora.session.model.*
 import com.fylora.session.model.Account.Companion.toAccount
 import com.fylora.session.notifications.Notification
@@ -8,6 +9,7 @@ import com.fylora.session.notifications.NotifyUser
 import io.ktor.websocket.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.math.log
 
 class Bloggle {
 
@@ -35,6 +37,12 @@ class Bloggle {
             )
         }
 
+        Logging.log(
+            Logging.UserFollowed(
+                follower = follower,
+                followed = followAccount
+            )
+        )
         return Resource.Success("User added successfully")
     }
 
@@ -51,9 +59,14 @@ class Bloggle {
             )
         )
 
+        Logging.log(
+            Logging.PostLiked(
+                post = post
+            )
+        )
         return if(post.userLiked.contains(activeUser.userId)) {
             post.userLiked.remove(activeUser.userId)
-            Resource.Success("Post successfully disliked")
+            Resource.Success("Post successfully unliked")
         } else {
             post.userLiked.add(activeUser.userId)
             Resource.Success("Post successfully liked")
@@ -65,9 +78,15 @@ class Bloggle {
             post.comments.find { comment ->
                 comment.commentId == commentId
             } != null
-        } ?: return Resource.Error("Comment not found")
+        } ?: return returnAndLogError(
+            message = "Comment not found",
+            logging = Logging.Fail("Couldn't like comment, Comment not found")
+        )
         val comment = post.comments.find { it.commentId == commentId }
-            ?: return Resource.Error("Comment not found")
+            ?: return returnAndLogError(
+                message = "Comment not found",
+                logging = Logging.Fail("Couldn't like comment, Comment not found")
+            )
 
         notify(
             authorId = post.authorId,
@@ -78,6 +97,11 @@ class Bloggle {
             )
         )
 
+        Logging.log(
+            Logging.CommentLiked(
+                comment = comment
+            )
+        )
         return if(comment.userLiked.contains(activeUser.userId)) {
             post.userLiked.remove(activeUser.userId)
             Resource.Success("Post successfully disliked")
@@ -95,7 +119,10 @@ class Bloggle {
         )
 
         if(activeUsers.contains(activeUser)) {
-            return Resource.Error("The user is already logged in")
+            return returnAndLogError(
+                message = "The user is already logged in",
+                logging = Logging.Fail("could not add user, already logged in")
+            )
         }
 
         val account = user.toAccount()
@@ -118,18 +145,33 @@ class Bloggle {
             )
         }
         notifiedUsers.remove(notifyUser)
-
         activeUsers.add(activeUser)
+
+        Logging.log(
+            Logging.UserConnected(
+                user = activeUser,
+                allUsers = activeUsers
+            )
+        )
         return Resource.Success(activeUser)
     }
 
     suspend fun disconnectUser(activeUser: ActiveUser): Resource<String> {
         if(!activeUsers.contains(activeUser)) {
-            return Resource.Error("The the user is not logged in")
+            return returnAndLogError(
+                message = "The the user is not logged in",
+                logging = Logging.Fail("couldn't disconnect user, not logged in")
+            )
         }
 
         activeUser.session.close()
         activeUsers.remove(activeUser)
+        Logging.log(
+            Logging.UserConnected(
+                user = activeUser,
+                allUsers = activeUsers
+            )
+        )
         return Resource.Success("The user has been disconnected")
     }
 
@@ -141,7 +183,10 @@ class Bloggle {
         )
 
         if(post.body.isBlank()) {
-            return Resource.Error("The body cannot be blank")
+            return returnAndLogError(
+                message = "The body cannot be blank",
+                logging = Logging.Fail("empty post body")
+            )
         }
 
         val account = accounts.find { it.userId == activeUser.userId }
@@ -157,6 +202,11 @@ class Bloggle {
         }
 
         posts.add(post)
+        Logging.log(
+            Logging.NewPost(
+                post = post
+            )
+        )
         return Resource.Success("The user posted successfully")
     }
 
@@ -168,7 +218,10 @@ class Bloggle {
         )
 
         if(comment.body.isBlank()) {
-            return Resource.Error("The body cannot be blank")
+            return returnAndLogError(
+                message = "The body cannot be blank",
+                logging = Logging.Fail("empty comment body")
+            )
         }
 
         val post = posts.find { it.postId == postId }
@@ -185,6 +238,12 @@ class Bloggle {
             )
         )
 
+        Logging.log(
+            Logging.NewComment(
+                comment = comment,
+                post = post
+            )
+        )
         return Resource.Success("The user posted successfully")
     }
 
@@ -194,19 +253,49 @@ class Bloggle {
     ) {
         val author = activeUsers.find { it.userId == authorId }
         if(author != null) {
+            Logging.log(
+                Logging.SentNotification(
+                    notification = notification,
+                    sentToId = authorId,
+                    sentToName = author.username,
+                    type = "type: Live"
+                )
+            )
             author.session.send(Json.encodeToString(notification))
         } else {
             val notifiedUser = notifiedUsers.find { it.userId == authorId }
             if(notifiedUser != null) {
                 notifiedUser.notifications.add(notification)
+                Logging.log(
+                    Logging.SentNotification(
+                        notification = notification,
+                        sentToId = notifiedUser.userId,
+                        sentToName = notifiedUser.notifications.toString(),
+                        type = "type: Notification, existing"
+                    )
+                )
             } else {
+                val newUser = NotifyUser(
+                    notifications = mutableListOf(notification),
+                    userId = authorId
+                )
                 notifiedUsers.add(
-                    NotifyUser(
-                        notifications = mutableListOf(notification),
-                        userId = authorId
+                    newUser
+                )
+                Logging.log(
+                    Logging.SentNotification(
+                        notification = notification,
+                        sentToId = newUser.userId,
+                        sentToName = newUser.notifications.toString(),
+                        type = "type: Notification, new"
                     )
                 )
             }
         }
+    }
+
+    private fun <T> returnAndLogError(message: String, logging: Logging): Resource<T> {
+        Logging.log(logging)
+        return Resource.Error(message)
     }
 }
