@@ -1,28 +1,48 @@
 package com.fylora.session
 
 import com.fylora.auth.data.user.User
-import com.fylora.session.model.ActiveUser
-import com.fylora.session.model.Comment
-import com.fylora.session.model.Post
-import com.fylora.session.model.Resource
+import com.fylora.session.model.*
+import com.fylora.session.model.Account.Companion.toAccount
 import com.fylora.session.notifications.Notification
 import com.fylora.session.notifications.NotifyUser
 import io.ktor.websocket.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.time.LocalDateTime
 
 class Bloggle {
 
     private val posts = mutableListOf<Post>()
+    private val accounts = mutableListOf<Account>()
     private val activeUsers = mutableListOf<ActiveUser>()
     private val notifiedUsers = mutableListOf<NotifyUser>()
+
+    suspend fun follow(follower: ActiveUser, followUserId: String): Resource<String> {
+        val followAccount = accounts.find { it.userId == followUserId }
+            ?: return Resource.Error("User not found")
+        val isFollowerInFollowAccountFollowers =
+            followAccount.followers.contains(follower.userId)
+
+        if(isFollowerInFollowAccountFollowers) {
+            followAccount.followers.remove(follower.userId)
+        } else {
+            followAccount.followers.add(follower.userId)
+            notify(
+                authorId = followUserId,
+                notification = Notification.Following(
+                    by = follower.username,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+
+        return Resource.Success("User added successfully")
+    }
 
     suspend fun likePost(activeUser: ActiveUser, postId: String): Resource<String> {
         val post = posts.find { it.postId == postId }
             ?: return Resource.Error("Post not found")
 
-        notifyAuthor(
+        notify(
             authorId = post.authorId,
             notification = Notification.PostLiked(
                 by = activeUser.username,
@@ -49,7 +69,7 @@ class Bloggle {
         val comment = post.comments.find { it.commentId == commentId }
             ?: return Resource.Error("Comment not found")
 
-        notifyAuthor(
+        notify(
             authorId = post.authorId,
             notification = Notification.CommentLiked(
                 by = activeUser.username,
@@ -78,6 +98,10 @@ class Bloggle {
             return Resource.Error("The user is already logged in")
         }
 
+        val account = user.toAccount()
+        if(!accounts.contains(account)) {
+            accounts.add(account)
+        }
 
         posts.forEach {
             activeUser.session.send(
@@ -120,10 +144,14 @@ class Bloggle {
             return Resource.Error("The body cannot be blank")
         }
 
-        activeUsers.forEach {
-            it.session.send(
-                Frame.Text(
-                    Json.encodeToString(post)
+        val account = accounts.find { it.userId == activeUser.userId }
+        account?.followers?.forEach {
+            notify(
+                authorId = it,
+                notification = Notification.NewPost(
+                    by = activeUser.username,
+                    timestamp = System.currentTimeMillis(),
+                    postId = post.postId
                 )
             )
         }
@@ -148,7 +176,7 @@ class Bloggle {
 
         post.comments.add(comment)
 
-        notifyAuthor(
+        notify(
             authorId = post.authorId,
             notification = Notification.Comment(
                 timestamp = System.currentTimeMillis(),
@@ -160,7 +188,7 @@ class Bloggle {
         return Resource.Success("The user posted successfully")
     }
 
-    private suspend fun notifyAuthor(
+    private suspend fun notify(
         authorId: String,
         notification: Notification,
     ) {

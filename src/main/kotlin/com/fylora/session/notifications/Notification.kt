@@ -23,4 +23,9 @@ sealed class Notification(val message: String) {
         val timestamp: Long,
         val postId: String,
     ): Notification("Commented on you post!")
+    data class NewPost(
+        val by: String,
+        val timestamp: Long,
+        val postId: String,
+    ): Notification("Made a new post!\ngo check it out!")
 }

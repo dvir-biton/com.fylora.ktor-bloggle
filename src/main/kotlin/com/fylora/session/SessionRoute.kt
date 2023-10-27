@@ -57,6 +57,10 @@ fun Route.session() {
                                 activeUser = activeUser,
                                 postId = request.postId
                             )
+                            is Request.MakeFollow -> bloggle.follow(
+                                follower = activeUser,
+                                followUserId = request.userId
+                            )
                         }
                     } catch (e: IllegalArgumentException) {
                         send(

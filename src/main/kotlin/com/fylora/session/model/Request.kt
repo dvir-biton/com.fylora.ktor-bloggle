@@ -5,6 +5,7 @@ sealed class Request(val type: String) {
     data class MakeComment(val body: String, val postId: String): Request("comment")
     data class MakeLikePost(val postId: String): Request("like_post")
     data class MakeLikeComment(val commentId: String): Request("like_comment")
+    data class MakeFollow(val userId: String): Request("follow")
 
     companion object {
         /*
@@ -45,6 +46,13 @@ sealed class Request(val type: String) {
                 "like_comment" -> {
                     if (parameters.size == 1) {
                         MakeLikeComment(parameters[0])
+                    } else {
+                        throw IllegalArgumentException("Invalid parameters for 'like_comment' action")
+                    }
+                }
+                "follow" -> {
+                    if (parameters.size == 1) {
+                        MakeFollow(parameters[0])
                     } else {
                         throw IllegalArgumentException("Invalid parameters for 'like_comment' action")
                     }
