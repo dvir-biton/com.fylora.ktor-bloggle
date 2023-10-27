@@ -1,5 +1,8 @@
 package com.fylora.session.notifications
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 sealed class Notification(val message: String) {
     data class PostLiked(
         val by: String,

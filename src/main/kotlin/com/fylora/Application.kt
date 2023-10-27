@@ -11,6 +11,8 @@ import com.fylora.auth.security.token.JwtTokenService
 import com.fylora.auth.security.token.TokenConfig
 import com.fylora.session.Bloggle
 import io.ktor.server.application.*
+import io.ktor.server.websocket.*
+import io.ktor.server.websocket.WebSockets
 import org.litote.kmongo.coroutine.coroutine
 import org.litote.kmongo.reactivestreams.KMongo
 
@@ -38,6 +40,7 @@ fun Application.module() {
     )
     val hashingService = SHA256HashingService()
 
+    install(WebSockets)
     configureMonitoring()
     configureSerialization()
     configureSecurity(tokenConfig)
