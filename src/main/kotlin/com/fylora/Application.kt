@@ -9,9 +9,12 @@ import com.fylora.plugins.*
 import com.fylora.auth.security.hashing.SHA256HashingService
 import com.fylora.auth.security.token.JwtTokenService
 import com.fylora.auth.security.token.TokenConfig
+import com.fylora.session.Bloggle
 import io.ktor.server.application.*
 import org.litote.kmongo.coroutine.coroutine
 import org.litote.kmongo.reactivestreams.KMongo
+
+val bloggle = Bloggle()
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
