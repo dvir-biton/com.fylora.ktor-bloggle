@@ -79,7 +79,13 @@ class Bloggle {
         return Resource.Success("The user has been disconnected")
     }
 
-    private suspend fun post(post: Post): Resource<String> {
+    suspend fun post(activeUser: ActiveUser, body: String): Resource<String> {
+        val post = Post(
+            authorId = activeUser.userId,
+            authorName = activeUser.username,
+            body = body
+        )
+
         if(post.body.isBlank()) {
             return Resource.Error("The body cannot be blank")
         }
@@ -96,7 +102,13 @@ class Bloggle {
         return Resource.Success("The user posted successfully")
     }
 
-    private suspend fun comment(comment: Comment, postId: String): Resource<String> {
+    fun comment(activeUser: ActiveUser, postId: String, body: String): Resource<String> {
+        val comment = Comment(
+            authorId = activeUser.userId,
+            authorName = activeUser.username,
+            body = body
+        )
+
         if(comment.body.isBlank()) {
             return Resource.Error("The body cannot be blank")
         }

@@ -8,6 +8,7 @@ import com.fylora.auth.security.token.TokenConfig
 import com.fylora.auth.security.token.TokenService
 import com.fylora.auth.signIn
 import com.fylora.auth.signUp
+import com.fylora.session.session
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -26,5 +27,6 @@ fun Application.configureRouting(
         signUp(hashingService, userDataSource)
         authenticate()
         getUserInfo()
+        session()
     }
 }
