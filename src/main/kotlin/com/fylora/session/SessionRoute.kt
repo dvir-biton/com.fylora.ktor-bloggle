@@ -13,7 +13,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 fun Route.session() {
-    webSocket("/") {
+    webSocket("/connect") {
         val user = call.authentication.principal<User>()
 
         if(user == null) {

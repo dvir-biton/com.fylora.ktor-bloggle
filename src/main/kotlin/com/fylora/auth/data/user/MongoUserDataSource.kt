@@ -17,8 +17,4 @@ class MongoUserDataSource(
     override suspend fun insertUser(user: User): Boolean {
         return users.insertOne(user).wasAcknowledged()
     }
-
-    override suspend fun getAllUsers(): List<User> {
-        return users.collection.find().toList()
-    }
 }
