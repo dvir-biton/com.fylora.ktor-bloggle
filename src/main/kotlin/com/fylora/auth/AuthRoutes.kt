@@ -33,6 +33,13 @@ fun Route.signUp(
             )
             return@post
         }
+        if(request.username.length > 12) {
+            call.respond(
+                HttpStatusCode.Conflict,
+                message = "The username cannot be more than 12 characters"
+            )
+            return@post
+        }
         if(userDataSource.getUserByUsername(request.username) != null) {
             call.respond(
                 HttpStatusCode.Conflict,

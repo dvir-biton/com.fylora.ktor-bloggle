@@ -61,6 +61,21 @@ fun Route.session() {
                                 follower = activeUser,
                                 followUserId = request.userId
                             )
+                            is Request.GetAccount -> bloggle.getAccount(
+                                activeUser = activeUser,
+                                userId = request.userId
+                            )
+                            is Request.GetPost -> bloggle.getPost(
+                                activeUser = activeUser,
+                                postId = request.postId
+                            )
+                            is Request.SearchAccounts -> bloggle.searchAccounts(
+                                activeUser = activeUser,
+                                query = request.query
+                            )
+                            Request.GetNotifications -> bloggle.getNotifications(
+                                activeUser = activeUser,
+                            )
                         }
                     } catch (e: IllegalArgumentException) {
                         send(

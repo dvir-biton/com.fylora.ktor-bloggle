@@ -17,7 +17,7 @@ class Bloggle {
     private val activeUsers = mutableListOf<ActiveUser>()
     private val notifiedUsers = mutableListOf<NotifyUser>()
 
-    suspend fun follow(follower: ActiveUser, followUserId: String): Resource<String> {
+    fun follow(follower: ActiveUser, followUserId: String): Resource<String> {
         val followAccount = accounts.find { it.userId == followUserId }
             ?: return Resource.Error("User not found")
         val isFollowerInFollowAccountFollowers =
@@ -45,7 +45,67 @@ class Bloggle {
         return Resource.Success("User added successfully")
     }
 
-    suspend fun likePost(activeUser: ActiveUser, postId: String): Resource<String> {
+    suspend fun getPost(activeUser: ActiveUser, postId: String): Resource<String> {
+        val post = posts.find { it.postId == postId }
+            ?: return Resource.Error("Post not found")
+
+        post.comments.forEach { comment ->
+            activeUser.session.send(
+                Json.encodeToString(comment)
+            )
+        }
+        return Resource.Success("Comments sent")
+    }
+
+    suspend fun getAccount(activeUser: ActiveUser, userId: String): Resource<String> {
+        val account = accounts.find { it.userId == userId }
+            ?: return Resource.Error("Account not found")
+
+        activeUser.session.send(
+            Json.encodeToString(account)
+        )
+        return Resource.Success("Comments sent")
+    }
+
+    suspend fun searchAccounts(activeUser: ActiveUser, query: String): Resource<String> {
+        val accountsFound = accounts.filter { account ->
+            account.username.contains(query, ignoreCase = true)
+        }.sortedWith(
+            compareBy(
+                { it.username.equals(query, ignoreCase = true) },
+                { it.username.startsWith(query, ignoreCase = true) },
+                { it.username }
+            )
+        )
+
+        if(accountsFound.isEmpty()) {
+            return Resource.Error("Did you hear that? No? That's the sound of silence, just like our results. Keep searching!")
+        }
+
+        accountsFound.forEach { account ->
+            activeUser.session.send(
+                Json.encodeToString(account)
+            )
+        }
+        return Resource.Success("Accounts sent")
+    }
+
+    suspend fun getNotifications(activeUser: ActiveUser): Resource<String> {
+        val notifyUser = notifiedUsers.find { it.userId == activeUser.userId }
+            ?: return Resource.Error("Your notifications are on vacation mode. Nothing to report at the moment.")
+
+        notifyUser.notifications.forEach { notification ->
+            activeUser.session.send(
+                Json.encodeToString(
+                    notification
+                )
+            )
+        }
+
+        return Resource.Success("Notifications sent")
+    }
+
+    fun likePost(activeUser: ActiveUser, postId: String): Resource<String> {
         val post = posts.find { it.postId == postId }
             ?: return Resource.Error("Post not found")
 
@@ -72,7 +132,7 @@ class Bloggle {
         }
     }
 
-    suspend fun likeComment(activeUser: ActiveUser, commentId: String): Resource<String> {
+    fun likeComment(activeUser: ActiveUser, commentId: String): Resource<String> {
         val post = posts.find { post ->
             post.comments.find { comment ->
                 comment.commentId == commentId
@@ -174,7 +234,7 @@ class Bloggle {
         return Resource.Success("The user has been disconnected")
     }
 
-    suspend fun post(activeUser: ActiveUser, body: String): Resource<String> {
+    fun post(activeUser: ActiveUser, body: String): Resource<String> {
         val post = Post(
             authorId = activeUser.userId,
             authorName = activeUser.username,
@@ -209,7 +269,7 @@ class Bloggle {
         return Resource.Success("The user posted successfully")
     }
 
-    suspend fun comment(activeUser: ActiveUser, postId: String, body: String): Resource<String> {
+    fun comment(activeUser: ActiveUser, postId: String, body: String): Resource<String> {
         val comment = Comment(
             authorId = activeUser.userId,
             authorName = activeUser.username,
@@ -246,50 +306,38 @@ class Bloggle {
         return Resource.Success("The user posted successfully")
     }
 
-    private suspend fun notify(
+    private fun notify(
         authorId: String,
         notification: Notification,
     ) {
-        val author = activeUsers.find { it.userId == authorId }
-        if(author != null) {
+        val notifiedUser = notifiedUsers.find { it.userId == authorId }
+
+        if(notifiedUser != null) {
+            notifiedUser.notifications.add(notification)
             Logging.log(
                 Logging.SentNotification(
                     notification = notification,
-                    sentToId = authorId,
-                    sentToName = author.username,
-                    type = "type: Live"
+                    sentToId = notifiedUser.userId,
+                    sentToName = notifiedUser.notifications.toString(),
+                    type = "type: Notification, existing"
                 )
             )
-            author.session.send(Json.encodeToString(notification))
         } else {
-            val notifiedUser = notifiedUsers.find { it.userId == authorId }
-            if(notifiedUser != null) {
-                notifiedUser.notifications.add(notification)
-                Logging.log(
-                    Logging.SentNotification(
-                        notification = notification,
-                        sentToId = notifiedUser.userId,
-                        sentToName = notifiedUser.notifications.toString(),
-                        type = "type: Notification, existing"
-                    )
+            val newUser = NotifyUser(
+                notifications = mutableListOf(notification),
+                userId = authorId
+            )
+            notifiedUsers.add(
+                newUser
+            )
+            Logging.log(
+                Logging.SentNotification(
+                    notification = notification,
+                    sentToId = newUser.userId,
+                    sentToName = newUser.notifications.toString(),
+                    type = "type: Notification, new"
                 )
-            } else {
-                val newUser = NotifyUser(
-                    notifications = mutableListOf(notification),
-                    userId = authorId
-                )
-                notifiedUsers.add(
-                    newUser
-                )
-                Logging.log(
-                    Logging.SentNotification(
-                        notification = notification,
-                        sentToId = newUser.userId,
-                        sentToName = newUser.notifications.toString(),
-                        type = "type: Notification, new"
-                    )
-                )
-            }
+            )
         }
     }
 
