@@ -1,6 +1,5 @@
 package com.fylora.logging
 
-import com.fylora.auth.data.user.User
 import com.fylora.session.model.Account
 import com.fylora.session.model.ActiveUser
 import com.fylora.session.model.Comment

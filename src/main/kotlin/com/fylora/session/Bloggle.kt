@@ -9,7 +9,6 @@ import com.fylora.session.notifications.NotifyUser
 import io.ktor.websocket.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlin.math.log
 
 class Bloggle {
 
@@ -167,7 +166,7 @@ class Bloggle {
         activeUser.session.close()
         activeUsers.remove(activeUser)
         Logging.log(
-            Logging.UserConnected(
+            Logging.UserDisconnected(
                 user = activeUser,
                 allUsers = activeUsers
             )
