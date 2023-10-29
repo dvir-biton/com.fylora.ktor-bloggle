@@ -26,21 +26,22 @@ fun Route.signUp(
             call.respond(HttpStatusCode.BadRequest)
             return@post
         }
-        if(request.username.length < 3) {
+        val username = request.username.lowercase()
+        if(username.length < 3) {
             call.respond(
                 HttpStatusCode.Conflict,
                 message = "The username cannot be less than 3 characters"
             )
             return@post
         }
-        if(request.username.length > 12) {
+        if(username.length > 12) {
             call.respond(
                 HttpStatusCode.Conflict,
                 message = "The username cannot be more than 12 characters"
             )
             return@post
         }
-        if(userDataSource.getUserByUsername(request.username) != null) {
+        if(userDataSource.getUserByUsername(username) != null) {
             call.respond(
                 HttpStatusCode.Conflict,
                 message = "The username is already taken"
@@ -86,7 +87,7 @@ fun Route.signIn(
             return@post
         }
 
-        val user = userDataSource.getUserByUsername(request.username)
+        val user = userDataSource.getUserByUsername(request.username.lowercase())
         if(user == null) {
             call.respond(
                 HttpStatusCode.Conflict,
@@ -115,6 +116,10 @@ fun Route.signIn(
             TokenClaim(
                 name = "userId",
                 value = user.id.toString()
+            ),
+            TokenClaim(
+                name = "username",
+                value = user.username
             )
         )
         call.respond(
@@ -138,8 +143,11 @@ fun Route.getUserInfo() {
     authenticate {
         get("info") {
             val principal = call.principal<JWTPrincipal>()
+
             val userId = principal?.getClaim("userId", String::class)
-            call.respond(HttpStatusCode.OK, "Your id is $userId")
+            val username = principal?.getClaim("username", String::class)
+
+            call.respond(HttpStatusCode.OK, "userId:$userId&username:$username")
         }
     }
 }
