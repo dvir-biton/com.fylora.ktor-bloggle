@@ -1,6 +1,5 @@
 package com.fylora.session
 
-import com.fylora.auth.data.user.User
 import com.fylora.logging.Logging
 import com.fylora.session.model.*
 import com.fylora.session.model.Account.Companion.toAccount
@@ -17,9 +16,18 @@ class Bloggle {
     private val activeUsers = mutableListOf<ActiveUser>()
     private val notifiedUsers = mutableListOf<NotifyUser>()
 
-    fun follow(follower: ActiveUser, followUserId: String): Resource<String> {
+    suspend fun follow(follower: ActiveUser, followUserId: String): Resource<String> {
         val followAccount = accounts.find { it.userId == followUserId }
-            ?: return Resource.Error("User not found")
+            ?: return logErrorSendAndReturn(
+                message = "User not found",
+                logging = Logging.Fail(
+                    "follow account"
+                ),
+                session = follower.session,
+                response = Response.ErrorResponse(
+                    "User not found"
+                )
+            )
         val isFollowerInFollowAccountFollowers =
             followAccount.followers.contains(follower.userId)
 
@@ -36,6 +44,15 @@ class Bloggle {
             )
         }
 
+        follower.session.send(
+            Frame.Text(
+                Json.encodeToString(
+                    Response.ConfirmationResponse(
+                        "Followed Successfully"
+                    )
+                )
+            )
+        )
         Logging.log(
             Logging.UserFollowed(
                 follower = follower,
@@ -47,22 +64,47 @@ class Bloggle {
 
     suspend fun getPost(activeUser: ActiveUser, postId: String): Resource<String> {
         val post = posts.find { it.postId == postId }
-            ?: return Resource.Error("Post not found")
-
-        post.comments.forEach { comment ->
-            activeUser.session.send(
-                Json.encodeToString(comment)
+            ?: return logErrorSendAndReturn(
+                message = "Post not found",
+                logging = Logging.Fail(
+                    "get post"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Post not found"
+                )
             )
-        }
+
+        activeUser.session.send(
+            Json.encodeToString(
+                Response.PostResponse(
+                    post
+                )
+            )
+        )
+
         return Resource.Success("Comments sent")
     }
 
     suspend fun getAccount(activeUser: ActiveUser, userId: String): Resource<String> {
         val account = accounts.find { it.userId == userId }
-            ?: return Resource.Error("Account not found")
+            ?: return logErrorSendAndReturn(
+                message = "Account not found",
+                logging = Logging.Fail(
+                    "get account"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Account not found"
+                )
+            )
 
         activeUser.session.send(
-            Json.encodeToString(account)
+            Json.encodeToString(
+                Response.AccountResponse(
+                    account
+                )
+            )
         )
         return Resource.Success("Comments sent")
     }
@@ -79,35 +121,65 @@ class Bloggle {
         )
 
         if(accountsFound.isEmpty()) {
-            return Resource.Error("Did you hear that? No? That's the sound of silence, just like our results. Keep searching!")
-        }
-
-        accountsFound.forEach { account ->
-            activeUser.session.send(
-                Json.encodeToString(account)
+            return logErrorSendAndReturn(
+                message = "Accounts not found",
+                logging = Logging.Fail(
+                    "accounts are empty"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Did you hear that? No? That's the sound of silence, just like our results. Keep searching!"
+                )
             )
         }
+
+        activeUser.session.send(
+            Json.encodeToString(
+                Response.AccountsResponse(
+                    accountsFound
+                )
+            )
+        )
+
         return Resource.Success("Accounts sent")
     }
 
     suspend fun getNotifications(activeUser: ActiveUser): Resource<String> {
         val notifyUser = notifiedUsers.find { it.userId == activeUser.userId }
-            ?: return Resource.Error("Your notifications are on vacation mode. Nothing to report at the moment.")
-
-        notifyUser.notifications.forEach { notification ->
-            activeUser.session.send(
-                Json.encodeToString(
-                    notification
+            ?: return logErrorSendAndReturn(
+                message = "No messages",
+                logging = Logging.Fail(
+                    "No messages"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Did you hear that? No? That's the sound of silence, just like our results. Keep searching!"
                 )
             )
-        }
+
+        activeUser.session.send(
+            Json.encodeToString(
+                Response.NotificationsResponse(
+                    notifyUser.notifications
+                )
+            )
+        )
 
         return Resource.Success("Notifications sent")
     }
 
-    fun likePost(activeUser: ActiveUser, postId: String): Resource<String> {
+    suspend fun likePost(activeUser: ActiveUser, postId: String): Resource<String> {
         val post = posts.find { it.postId == postId }
-            ?: return Resource.Error("Post not found")
+            ?: return logErrorSendAndReturn(
+                message = "Post not found",
+                logging = Logging.Fail(
+                    "Post not found couldn't like the post"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Post not found"
+                )
+            )
 
         notify(
             authorId = post.authorId,
@@ -125,26 +197,52 @@ class Bloggle {
         )
         return if(post.userLiked.contains(activeUser.userId)) {
             post.userLiked.remove(activeUser.userId)
+            activeUser.session.send(
+                Json.encodeToString(
+                    Response.ConfirmationResponse(
+                        "Post successfully disliked"
+                    )
+                )
+            )
             Resource.Success("Post successfully unliked")
         } else {
             post.userLiked.add(activeUser.userId)
+            activeUser.session.send(
+                Json.encodeToString(
+                    Response.ConfirmationResponse(
+                        "Post successfully liked"
+                    )
+                )
+            )
             Resource.Success("Post successfully liked")
         }
     }
 
-    fun likeComment(activeUser: ActiveUser, commentId: String): Resource<String> {
+    suspend fun likeComment(activeUser: ActiveUser, commentId: String): Resource<String> {
         val post = posts.find { post ->
             post.comments.find { comment ->
                 comment.commentId == commentId
             } != null
-        } ?: return returnAndLogError(
+        } ?: return logErrorSendAndReturn(
             message = "Comment not found",
-            logging = Logging.Fail("Couldn't like comment, Comment not found")
+            logging = Logging.Fail(
+                "Comment not found"
+            ),
+            session = activeUser.session,
+            response = Response.ErrorResponse(
+                "Comment not found"
+            )
         )
         val comment = post.comments.find { it.commentId == commentId }
-            ?: return returnAndLogError(
+            ?: return logErrorSendAndReturn(
                 message = "Comment not found",
-                logging = Logging.Fail("Couldn't like comment, Comment not found")
+                logging = Logging.Fail(
+                    "Comment not found"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Comment not found"
+                )
             )
 
         notify(
@@ -163,47 +261,62 @@ class Bloggle {
         )
         return if(comment.userLiked.contains(activeUser.userId)) {
             post.userLiked.remove(activeUser.userId)
-            Resource.Success("Post successfully disliked")
+            activeUser.session.send(
+                Json.encodeToString(
+                    Response.ConfirmationResponse(
+                        "Comment successfully disliked"
+                    )
+                )
+            )
+            Resource.Success("Comment successfully disliked")
         } else {
             comment.userLiked.add(activeUser.userId)
-            Resource.Success("Post successfully liked")
+            activeUser.session.send(
+                Json.encodeToString(
+                    Response.ConfirmationResponse(
+                        "Comment successfully liked"
+                    )
+                )
+            )
+            Resource.Success("Comment successfully liked")
         }
     }
 
-    suspend fun addUser(user: User, session: WebSocketSession): Resource<ActiveUser> {
+    suspend fun getPosts(activeUser: ActiveUser) {
+        activeUser.session.send(
+            Frame.Text(
+                Json.encodeToString(
+                    Response.PostsResponse(posts)
+                )
+            )
+        )
+    }
+
+    suspend fun addUser(userId: String, username: String, session: WebSocketSession): Resource<ActiveUser> {
         val activeUser = ActiveUser(
-            username = user.username,
-            userId = user.id.toString(),
+            username = username,
+            userId = userId,
             session = session
         )
 
         if(activeUsers.contains(activeUser)) {
-            return returnAndLogError(
-                message = "The user is already logged in",
-                logging = Logging.Fail("could not add user, already logged in")
-            )
-        }
-
-        val account = user.toAccount()
-        if(!accounts.contains(account)) {
-            accounts.add(account)
-        }
-
-        posts.forEach {
-            activeUser.session.send(
-                Frame.Text(
-                    Json.encodeToString(it)
+            return logErrorSendAndReturn(
+                message = "User already logged in",
+                logging = Logging.Fail(
+                    "User already logged in"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "The user is already logged in"
                 )
             )
         }
 
-        val notifyUser = notifiedUsers.find { it.userId == user.id.toString() }
-        notifyUser?.notifications?.forEach {
-            activeUser.session.send(
-                Json.encodeToString(it)
-            )
+        val account = activeUser.toAccount()
+        if(!accounts.contains(account)) {
+            accounts.add(account)
         }
-        notifiedUsers.remove(notifyUser)
+
         activeUsers.add(activeUser)
 
         Logging.log(
@@ -217,9 +330,15 @@ class Bloggle {
 
     suspend fun disconnectUser(activeUser: ActiveUser): Resource<String> {
         if(!activeUsers.contains(activeUser)) {
-            return returnAndLogError(
-                message = "The the user is not logged in",
-                logging = Logging.Fail("couldn't disconnect user, not logged in")
+            return logErrorSendAndReturn(
+                message = "User isn't logged in",
+                logging = Logging.Fail(
+                    "User isn't logged in"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "The user isn't logged in"
+                )
             )
         }
 
@@ -234,7 +353,7 @@ class Bloggle {
         return Resource.Success("The user has been disconnected")
     }
 
-    fun post(activeUser: ActiveUser, body: String): Resource<String> {
+    suspend fun post(activeUser: ActiveUser, body: String): Resource<String> {
         val post = Post(
             authorId = activeUser.userId,
             authorName = activeUser.username,
@@ -242,9 +361,15 @@ class Bloggle {
         )
 
         if(post.body.isBlank()) {
-            return returnAndLogError(
-                message = "The body cannot be blank",
-                logging = Logging.Fail("empty post body")
+            return logErrorSendAndReturn(
+                message = "Empty post body",
+                logging = Logging.Fail(
+                    "Empty post body"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "The post body cannot be empty"
+                )
             )
         }
 
@@ -261,6 +386,14 @@ class Bloggle {
         }
 
         posts.add(post)
+
+        activeUser.session.send(
+            Json.encodeToString(
+                Response.PostResponse(
+                    post
+                )
+            )
+        )
         Logging.log(
             Logging.NewPost(
                 post = post
@@ -269,7 +402,7 @@ class Bloggle {
         return Resource.Success("The user posted successfully")
     }
 
-    fun comment(activeUser: ActiveUser, postId: String, body: String): Resource<String> {
+    suspend fun comment(activeUser: ActiveUser, postId: String, body: String): Resource<String> {
         val comment = Comment(
             authorId = activeUser.userId,
             authorName = activeUser.username,
@@ -277,14 +410,29 @@ class Bloggle {
         )
 
         if(comment.body.isBlank()) {
-            return returnAndLogError(
-                message = "The body cannot be blank",
-                logging = Logging.Fail("empty comment body")
+            return logErrorSendAndReturn(
+                message = "Empty comment body",
+                logging = Logging.Fail(
+                    "Empty comment body"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "The comment body cannot be empty"
+                )
             )
         }
 
         val post = posts.find { it.postId == postId }
-            ?: return Resource.Error("Post not found")
+            ?: return logErrorSendAndReturn(
+                message = "Post not found",
+                logging = Logging.Fail(
+                    "Post not found couldn't like the post"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Post not found"
+                )
+            )
 
         post.comments.add(comment)
 
@@ -341,7 +489,20 @@ class Bloggle {
         }
     }
 
-    private fun <T> returnAndLogError(message: String, logging: Logging): Resource<T> {
+    private suspend fun <T> logErrorSendAndReturn(
+        message: String,
+        logging: Logging,
+        session: WebSocketSession,
+        response: Response
+    ): Resource<T> {
+        session.send(
+            Frame.Text(
+                Json.encodeToString(
+                    response
+                )
+            )
+        )
+
         Logging.log(logging)
         return Resource.Error(message)
     }

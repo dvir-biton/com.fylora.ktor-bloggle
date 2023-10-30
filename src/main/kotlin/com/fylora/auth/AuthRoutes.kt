@@ -16,6 +16,8 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 fun Route.signUp(
     hashingService: HashingService,
@@ -122,6 +124,7 @@ fun Route.signIn(
                 value = user.username
             )
         )
+
         call.respond(
             status = HttpStatusCode.OK,
             message = AuthResponse(
@@ -147,7 +150,10 @@ fun Route.getUserInfo() {
             val userId = principal?.getClaim("userId", String::class)
             val username = principal?.getClaim("username", String::class)
 
-            call.respond(HttpStatusCode.OK, "userId:$userId&username:$username")
+            call.respond(
+                HttpStatusCode.OK,
+                Json.encodeToString("userId:$userId&username:$username")
+            )
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.fylora.session.model
 
-import com.fylora.auth.data.user.User
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -12,10 +11,10 @@ data class Account(
     val followers: MutableList<String> = mutableListOf()
 ) {
     companion object {
-        fun User.toAccount(): Account {
+        fun ActiveUser.toAccount(): Account {
             return Account(
                 username = this.username,
-                userId = this.id.toString()
+                userId = userId
             )
         }
     }
