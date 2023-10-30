@@ -7,7 +7,7 @@ val commons_codec_version: String by project
 plugins {
     kotlin("jvm") version "1.9.10"
     id("io.ktor.plugin") version "2.3.5"
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.10"
+    kotlin("plugin.serialization") version "1.9.10"
 }
 
 group = "com.fylora"
@@ -37,6 +37,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
     testImplementation("io.ktor:ktor-server-tests-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
     implementation("org.litote.kmongo:kmongo:$kmongo_version")
     implementation("org.litote.kmongo:kmongo-coroutine:$kmongo_version")

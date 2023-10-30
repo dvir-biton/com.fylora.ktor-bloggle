@@ -44,13 +44,10 @@ class Bloggle {
             )
         }
 
-        follower.session.send(
-            Frame.Text(
-                Json.encodeToString(
-                    Response.ConfirmationResponse(
-                        "Followed Successfully"
-                    )
-                )
+        sendResponse(
+            session = follower.session,
+            response = Response.ConfirmationResponse(
+                "Followed Successfully"
             )
         )
         Logging.log(
@@ -75,12 +72,9 @@ class Bloggle {
                 )
             )
 
-        activeUser.session.send(
-            Json.encodeToString(
-                Response.PostResponse(
-                    post
-                )
-            )
+        sendResponse(
+            session = activeUser.session,
+            response = Response.PostResponse(post)
         )
 
         return Resource.Success("Comments sent")
@@ -99,11 +93,10 @@ class Bloggle {
                 )
             )
 
-        activeUser.session.send(
-            Json.encodeToString(
-                Response.AccountResponse(
-                    account
-                )
+        sendResponse(
+            session = activeUser.session,
+            response = Response.AccountResponse(
+                account
             )
         )
         return Resource.Success("Comments sent")
@@ -133,11 +126,10 @@ class Bloggle {
             )
         }
 
-        activeUser.session.send(
-            Json.encodeToString(
-                Response.AccountsResponse(
-                    accountsFound
-                )
+        sendResponse(
+            session = activeUser.session,
+            response = Response.AccountsResponse(
+                accountsFound
             )
         )
 
@@ -157,11 +149,11 @@ class Bloggle {
                 )
             )
 
-        activeUser.session.send(
-            Json.encodeToString(
-                Response.NotificationsResponse(
-                    notifyUser.notifications
-                )
+
+        sendResponse(
+            session = activeUser.session,
+            response = Response.NotificationsResponse(
+                notifyUser.notifications
             )
         )
 
@@ -197,21 +189,19 @@ class Bloggle {
         )
         return if(post.userLiked.contains(activeUser.userId)) {
             post.userLiked.remove(activeUser.userId)
-            activeUser.session.send(
-                Json.encodeToString(
-                    Response.ConfirmationResponse(
-                        "Post successfully disliked"
-                    )
+            sendResponse(
+                session = activeUser.session,
+                response = Response.ConfirmationResponse(
+                    "Post successfully disliked"
                 )
             )
             Resource.Success("Post successfully unliked")
         } else {
             post.userLiked.add(activeUser.userId)
-            activeUser.session.send(
-                Json.encodeToString(
-                    Response.ConfirmationResponse(
-                        "Post successfully liked"
-                    )
+            sendResponse(
+                session = activeUser.session,
+                response = Response.ConfirmationResponse(
+                    "Post successfully liked"
                 )
             )
             Resource.Success("Post successfully liked")
@@ -261,21 +251,19 @@ class Bloggle {
         )
         return if(comment.userLiked.contains(activeUser.userId)) {
             post.userLiked.remove(activeUser.userId)
-            activeUser.session.send(
-                Json.encodeToString(
-                    Response.ConfirmationResponse(
-                        "Comment successfully disliked"
-                    )
+            sendResponse(
+                session = activeUser.session,
+                response = Response.ConfirmationResponse(
+                    "Comment successfully disliked"
                 )
             )
             Resource.Success("Comment successfully disliked")
         } else {
             comment.userLiked.add(activeUser.userId)
-            activeUser.session.send(
-                Json.encodeToString(
-                    Response.ConfirmationResponse(
-                        "Comment successfully liked"
-                    )
+            sendResponse(
+                session = activeUser.session,
+                response = Response.ConfirmationResponse(
+                    "Comment successfully liked"
                 )
             )
             Resource.Success("Comment successfully liked")
@@ -283,11 +271,10 @@ class Bloggle {
     }
 
     suspend fun getPosts(activeUser: ActiveUser) {
-        activeUser.session.send(
-            Frame.Text(
-                Json.encodeToString(
-                    Response.PostsResponse(posts)
-                )
+        sendResponse(
+            session = activeUser.session,
+            response = Response.PostsResponse(
+                posts
             )
         )
     }
@@ -387,11 +374,10 @@ class Bloggle {
 
         posts.add(post)
 
-        activeUser.session.send(
-            Json.encodeToString(
-                Response.PostResponse(
-                    post
-                )
+        sendResponse(
+            session = activeUser.session,
+            response = Response.PostResponse(
+                post
             )
         )
         Logging.log(
@@ -487,6 +473,19 @@ class Bloggle {
                 )
             )
         }
+    }
+
+    private suspend fun sendResponse(
+        session: WebSocketSession,
+        response: Response
+    ) {
+        session.send(
+            Frame.Text(
+                Json.encodeToString(
+                    response
+                )
+            )
+        )
     }
 
     private suspend fun <T> logErrorSendAndReturn(

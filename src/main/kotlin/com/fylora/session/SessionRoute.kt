@@ -85,7 +85,6 @@ fun Route.session() {
                                 Request.GetNotifications -> bloggle.getNotifications(
                                     activeUser = activeUser,
                                 )
-
                                 Request.GetPosts -> bloggle.getPosts(
                                     activeUser = activeUser
                                 )
