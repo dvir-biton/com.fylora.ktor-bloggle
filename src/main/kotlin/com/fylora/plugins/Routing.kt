@@ -28,7 +28,5 @@ fun Application.configureRouting(
         authenticate()
         getUserInfo()
         session()
-
-        // test()
     }
 }

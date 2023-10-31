@@ -195,6 +195,14 @@ class Bloggle {
                     "Post successfully disliked"
                 )
             )
+            activeUsers.forEach {
+                sendResponse(
+                    session = it.session,
+                    response = Response.PostsResponse(
+                        posts
+                    )
+                )
+            }
             Resource.Success("Post successfully unliked")
         } else {
             post.userLiked.add(activeUser.userId)
@@ -204,6 +212,14 @@ class Bloggle {
                     "Post successfully liked"
                 )
             )
+            activeUsers.forEach {
+                sendResponse(
+                    session = it.session,
+                    response = Response.PostsResponse(
+                        posts
+                    )
+                )
+            }
             Resource.Success("Post successfully liked")
         }
     }
@@ -374,12 +390,14 @@ class Bloggle {
 
         posts.add(post)
 
-        sendResponse(
-            session = activeUser.session,
-            response = Response.PostResponse(
-                post
+        activeUsers.forEach {
+            sendResponse(
+                session = it.session,
+                response = Response.PostsResponse(
+                    posts
+                )
             )
-        )
+        }
         Logging.log(
             Logging.NewPost(
                 post = post

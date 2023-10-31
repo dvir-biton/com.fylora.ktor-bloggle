@@ -60,7 +60,7 @@ fun Route.signUp(
 
         val saltedHash = hashingService.generateSaltedHash(request.password)
         val user = User(
-            username = request.username,
+            username = username,
             password = saltedHash.hash,
             salt = saltedHash.salt
         )
