@@ -1,15 +1,16 @@
 package com.fylora.session
 
 import com.fylora.bloggle
+import com.fylora.logging.Logging
 import com.fylora.session.model.Request
 import com.fylora.session.model.Resource
+import com.fylora.session.model.Response
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 fun Route.session() {
@@ -90,9 +91,13 @@ fun Route.session() {
                                 )
                             }
                         } catch (e: IllegalArgumentException) {
-                            send(
-                                Frame.Text(
-                                    Json.encodeToString(e.message ?: "Invalid request")
+                            val message = e.message ?: "Invalid request"
+                            bloggle.logErrorSendAndReturn<String>(
+                                message = message,
+                                logging = Logging.Fail(e.message ?: "Invalid request"),
+                                session = activeUser.session,
+                                response = Response.ErrorResponse(
+                                    e.message ?: "Invalid request"
                                 )
                             )
                         }

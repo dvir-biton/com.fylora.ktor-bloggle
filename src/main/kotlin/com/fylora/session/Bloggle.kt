@@ -102,7 +102,11 @@ class Bloggle {
         return Resource.Success("Comments sent")
     }
 
-    suspend fun searchAccounts(activeUser: ActiveUser, query: String): Resource<String> {
+    suspend fun searchAccounts(
+        activeUser: ActiveUser,
+        query: String,
+        amount: Int = 50
+    ): Resource<String> {
         val accountsFound = accounts.filter { account ->
             account.username.contains(query, ignoreCase = true)
         }.sortedWith(
@@ -111,7 +115,7 @@ class Bloggle {
                 { it.username.startsWith(query, ignoreCase = true) },
                 { it.username }
             )
-        )
+        ).take(amount)
 
         if(accountsFound.isEmpty()) {
             return logErrorSendAndReturn(
@@ -506,7 +510,7 @@ class Bloggle {
         )
     }
 
-    private suspend fun <T> logErrorSendAndReturn(
+    suspend fun <T> logErrorSendAndReturn(
         message: String,
         logging: Logging,
         session: WebSocketSession,
