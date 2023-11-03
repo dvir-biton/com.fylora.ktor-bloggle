@@ -17,6 +17,20 @@ class Bloggle {
     private val notifiedUsers = mutableListOf<NotifyUser>()
 
     suspend fun follow(follower: ActiveUser, followUserId: String): Resource<String> {
+        val isOwnId = follower.userId == followUserId
+        if(isOwnId) {
+            return logErrorSendAndReturn(
+                message = "You can't follow yourself",
+                logging = Logging.Fail(
+                    "You can't follow yourself"
+                ),
+                session = follower.session,
+                response = Response.ErrorResponse(
+                    "You can't follow yourself"
+                )
+            )
+        }
+
         val followAccount = accounts.find { it.userId == followUserId }
             ?: return logErrorSendAndReturn(
                 message = "User not found",
@@ -28,10 +42,10 @@ class Bloggle {
                     "User not found"
                 )
             )
-        val isFollowerInFollowAccountFollowers =
+        val isUserFollowing =
             followAccount.followers.contains(follower.userId)
 
-        if(isFollowerInFollowAccountFollowers) {
+        if(isUserFollowing) {
             followAccount.followers.remove(follower.userId)
         } else {
             followAccount.followers.add(follower.userId)
@@ -176,6 +190,30 @@ class Bloggle {
                     "Post not found"
                 )
             )
+        val account = accounts.find { it.userId == post.authorId }
+            ?: return logErrorSendAndReturn(
+                message = "Account not found",
+                logging = Logging.Fail(
+                    "Account not found couldn't like the post"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Account not found"
+                )
+            )
+        val index = accounts.indexOf(account)
+        if(index == -1) {
+            return logErrorSendAndReturn(
+                message = "Account not found",
+                logging = Logging.Fail(
+                    "Account not found couldn't like the post"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Account not found"
+                )
+            )
+        }
 
         notify(
             authorId = post.authorId,
@@ -191,6 +229,7 @@ class Bloggle {
                 post = post
             )
         )
+
         return if(post.userLiked.contains(activeUser.userId)) {
             post.userLiked.remove(activeUser.userId)
             sendResponse(
@@ -207,6 +246,11 @@ class Bloggle {
                     )
                 )
             }
+
+            val updatedAccount = account.copy(
+                totalLikes = account.totalLikes - 1
+            )
+            accounts[index] = updatedAccount
             Resource.Success("Post successfully unliked")
         } else {
             post.userLiked.add(activeUser.userId)
@@ -224,6 +268,11 @@ class Bloggle {
                     )
                 )
             }
+
+            val updatedAccount = account.copy(
+                totalLikes = account.totalLikes - 1
+            )
+            accounts[index] = updatedAccount
             Resource.Success("Post successfully liked")
         }
     }
@@ -254,6 +303,30 @@ class Bloggle {
                     "Comment not found"
                 )
             )
+        val account = accounts.find { it.userId == post.authorId }
+            ?: return logErrorSendAndReturn(
+                message = "Account not found",
+                logging = Logging.Fail(
+                    "Account not found couldn't like the post"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Account not found"
+                )
+            )
+        val index = accounts.indexOf(account)
+        if(index == -1) {
+            return logErrorSendAndReturn(
+                message = "Account not found",
+                logging = Logging.Fail(
+                    "Account not found couldn't like the post"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Account not found"
+                )
+            )
+        }
 
         notify(
             authorId = post.authorId,
@@ -277,6 +350,11 @@ class Bloggle {
                     "Comment successfully disliked"
                 )
             )
+
+            val updatedAccount = account.copy(
+                totalLikes = account.totalLikes - 1
+            )
+            accounts[index] = updatedAccount
             Resource.Success("Comment successfully disliked")
         } else {
             comment.userLiked.add(activeUser.userId)
@@ -286,6 +364,10 @@ class Bloggle {
                     "Comment successfully liked"
                 )
             )
+            val updatedAccount = account.copy(
+                totalLikes = account.totalLikes + 1
+            )
+            accounts[index] = updatedAccount
             Resource.Success("Comment successfully liked")
         }
     }
@@ -381,7 +463,18 @@ class Bloggle {
         }
 
         val account = accounts.find { it.userId == activeUser.userId }
-        account?.followers?.forEach {
+            ?: return logErrorSendAndReturn(
+                message = "Account not found",
+                logging = Logging.Fail(
+                    "Account not found couldn't add the post"
+                ),
+                session = activeUser.session,
+                response = Response.ErrorResponse(
+                    "Account not found"
+                )
+            )
+        account.posts.add(post)
+        account.followers.forEach {
             notify(
                 authorId = it,
                 notification = Notification.NewPost(
