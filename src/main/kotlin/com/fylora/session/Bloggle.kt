@@ -1,8 +1,9 @@
 package com.fylora.session
 
+import com.fylora.auth.data.user.User
+import com.fylora.auth.data.user.User.Companion.toAccount
 import com.fylora.logging.Logging
 import com.fylora.session.model.*
-import com.fylora.session.model.Account.Companion.toAccount
 import com.fylora.session.notifications.Notification
 import com.fylora.session.notifications.NotifyUser
 import io.ktor.websocket.*
@@ -15,6 +16,12 @@ class Bloggle {
     private val accounts = mutableListOf<Account>()
     private val activeUsers = mutableListOf<ActiveUser>()
     private val notifiedUsers = mutableListOf<NotifyUser>()
+
+    fun makeAccounts(users: List<User>) {
+        users.forEach {
+            accounts.add(it.toAccount())
+        }
+    }
 
     suspend fun follow(follower: ActiveUser, followUserId: String): Resource<String> {
         val isOwnId = follower.userId == followUserId
@@ -270,7 +277,7 @@ class Bloggle {
             }
 
             val updatedAccount = account.copy(
-                totalLikes = account.totalLikes - 1
+                totalLikes = account.totalLikes + 1
             )
             accounts[index] = updatedAccount
             Resource.Success("Post successfully liked")
@@ -399,11 +406,6 @@ class Bloggle {
                     "The user is already logged in"
                 )
             )
-        }
-
-        val account = activeUser.toAccount()
-        if(!accounts.contains(account)) {
-            accounts.add(account)
         }
 
         activeUsers.add(activeUser)

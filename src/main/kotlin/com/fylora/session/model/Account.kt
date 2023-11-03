@@ -9,13 +9,4 @@ data class Account(
     val posts: MutableList<Post> = mutableListOf(),
     val totalLikes: Int = 0,
     val followers: MutableList<String> = mutableListOf()
-) {
-    companion object {
-        fun ActiveUser.toAccount(): Account {
-            return Account(
-                username = this.username,
-                userId = userId
-            )
-        }
-    }
-}
+)
