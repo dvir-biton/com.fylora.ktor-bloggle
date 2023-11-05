@@ -13,6 +13,9 @@ sealed class Response {
     @SerialName("respond_posts")
     data class PostsResponse(val posts: List<Post>): Response()
     @Serializable
+    @SerialName("respond_comment")
+    data class CommentResponse(val comment: Comment): Response()
+    @Serializable
     @SerialName("respond_notifications")
     data class NotificationsResponse(val notification: List<Notification>): Response()
     @Serializable

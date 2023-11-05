@@ -120,7 +120,7 @@ class Bloggle {
                 account
             )
         )
-        return Resource.Success("Comments sent")
+        return Resource.Success("Accounts sent")
     }
 
     suspend fun searchAccounts(
@@ -395,6 +395,13 @@ class Bloggle {
             session = session
         )
 
+        accounts.add(
+            Account(
+                username = username,
+                userId = userId,
+            )
+        )
+
         if(activeUsers.contains(activeUser)) {
             return logErrorSendAndReturn(
                 message = "User already logged in",
@@ -538,6 +545,15 @@ class Bloggle {
             )
 
         post.comments.add(comment)
+
+        activeUsers.forEach {
+            sendResponse(
+                session = it.session,
+                response = Response.PostResponse(
+                    post
+                )
+            )
+        }
 
         notify(
             authorId = post.authorId,
