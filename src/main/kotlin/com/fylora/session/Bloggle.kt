@@ -57,6 +57,7 @@ class Bloggle {
         } else {
             followAccount.followers.add(follower.userId)
             notify(
+                notifierId = follower.userId,
                 authorId = followUserId,
                 notification = Notification.Following(
                     by = follower.username,
@@ -223,6 +224,7 @@ class Bloggle {
         }
 
         notify(
+            notifierId = activeUser.userId,
             authorId = post.authorId,
             notification = Notification.PostLiked(
                 by = activeUser.username,
@@ -336,6 +338,7 @@ class Bloggle {
         }
 
         notify(
+            notifierId = activeUser.userId,
             authorId = post.authorId,
             notification = Notification.CommentLiked(
                 by = activeUser.username,
@@ -395,12 +398,17 @@ class Bloggle {
             session = session
         )
 
-        accounts.add(
-            Account(
-                username = username,
-                userId = userId,
-            )
+        val account = Account(
+            username = username,
+            userId = userId,
         )
+        if(
+            !accounts.any { it.userId == userId }
+        ) {
+            accounts.add(
+                account
+            )
+        }
 
         if(activeUsers.contains(activeUser)) {
             return logErrorSendAndReturn(
@@ -485,6 +493,7 @@ class Bloggle {
         account.posts.add(post)
         account.followers.forEach {
             notify(
+                notifierId = activeUser.userId,
                 authorId = it,
                 notification = Notification.NewPost(
                     by = activeUser.username,
@@ -556,6 +565,7 @@ class Bloggle {
         }
 
         notify(
+            notifierId = activeUser.userId,
             authorId = post.authorId,
             notification = Notification.Comment(
                 timestamp = System.currentTimeMillis(),
@@ -574,9 +584,13 @@ class Bloggle {
     }
 
     private fun notify(
+        notifierId: String,
         authorId: String,
         notification: Notification,
     ) {
+        if(notifierId == authorId)
+            return
+
         val notifiedUser = notifiedUsers.find { it.userId == authorId }
 
         if(notifiedUser != null) {
