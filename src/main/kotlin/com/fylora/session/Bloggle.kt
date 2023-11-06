@@ -490,7 +490,7 @@ class Bloggle {
                     "Account not found"
                 )
             )
-        account.posts.add(post)
+        account.posts.add(0, post)
         account.followers.forEach {
             notify(
                 notifierId = activeUser.userId,
@@ -503,7 +503,7 @@ class Bloggle {
             )
         }
 
-        posts.add(post)
+        posts.add(0, post)
 
         activeUsers.forEach {
             sendResponse(
@@ -553,7 +553,7 @@ class Bloggle {
                 )
             )
 
-        post.comments.add(comment)
+        post.comments.add(0, comment)
 
         activeUsers.forEach {
             sendResponse(
@@ -594,7 +594,7 @@ class Bloggle {
         val notifiedUser = notifiedUsers.find { it.userId == authorId }
 
         if(notifiedUser != null) {
-            notifiedUser.notifications.add(notification)
+            notifiedUser.notifications.add(0, notification)
             Logging.log(
                 Logging.SentNotification(
                     notification = notification,
